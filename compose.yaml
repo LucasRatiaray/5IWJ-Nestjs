@@ -1,6 +1,6 @@
 services:
   node:
-    image: node:26.2.0-alpine3.23
+    image: node:24-alpine
     tty: true
     stdin_open: true
     working_dir: /home/node
