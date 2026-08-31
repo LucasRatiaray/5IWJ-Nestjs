@@ -5,9 +5,11 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -23,8 +25,13 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  me(@CurrentUser() user: JwtPayload) {
-    return this.usersService.findOneById(user.sub);
+  async me(@CurrentUser() user: JwtPayload) {
+    try {
+      return await this.usersService.findOneById(user.sub);
+    } catch (error) {
+      if (error instanceof NotFoundException) throw new UnauthorizedException();
+      throw error;
+    }
   }
 
   @Get()
