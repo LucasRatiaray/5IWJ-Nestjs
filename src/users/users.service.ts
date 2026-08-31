@@ -31,12 +31,6 @@ export class UsersService {
     return user;
   }
 
-  async findByEmail(email: string) {
-    const user = await this.repository.findOneBy({ email });
-    if (!user) throw new NotFoundException('User not found');
-    return user;
-  }
-
   findByEmailWithPassword(email: string) {
     return this.repository
       .createQueryBuilder('u')
@@ -92,7 +86,8 @@ export class UsersService {
     try {
       return await this.repository.save(user);
     } catch (error) {
-      if (isUniqueViolation(error)) throw new ConflictException('Email');
+      if (isUniqueViolation(error))
+        throw new ConflictException('Email already in use');
       throw error;
     }
   }
