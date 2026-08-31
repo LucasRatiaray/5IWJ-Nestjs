@@ -3,13 +3,13 @@ services:
     image: node:24-alpine
     tty: true
     stdin_open: true
+    user: node
     working_dir: /home/node/app
     command: sh -c "npm install && npm run start:dev"
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - .:/home/node/app
-      - /home/node/app/node_modules
     env_file:
       - .env.development.local
     depends_on:
@@ -19,13 +19,13 @@ services:
   db:
     image: postgres:16-alpine
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata_dev:/var/lib/postgresql/data
     env_file:
       - .env.development.local
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U consignart"]
+      test: ['CMD-SHELL', 'pg_isready -U consignart']
       interval: 5s
       timeout: 5s
       retries: 5
