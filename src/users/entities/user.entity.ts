@@ -7,7 +7,7 @@ import {
   OneToMany,
   UpdateDateColumn,
 } from 'typeorm';
-import { Exclude } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { UserRole } from '../enums/user-role.enum';
 import { Gallery } from '../../galleries/entities/gallery.entity';
 import { Artist } from '../../artists/entities/artist.entity';
@@ -15,27 +15,33 @@ import { Collector } from '../../collectors/entities/collector.entity';
 import { ArtistTransferRequest } from '../../artist-transfer-requests/entities/artist-transfer-request.entity';
 
 @Entity('users')
+@Exclude()
 export class User {
   @PrimaryGeneratedColumn('uuid')
+  @Expose()
   id: string;
 
   @Column({ unique: true })
+  @Expose()
   email: string;
 
-  @Exclude()
   @Column({ select: false })
   password: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.COLLECTOR })
+  @Expose()
   role: UserRole;
 
   @Column({ default: true })
+  @Expose()
   isActive: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
+  @Expose()
   createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
+  @Expose()
   updatedAt: Date;
 
   @OneToOne(() => Gallery, (gallery) => gallery.user)
