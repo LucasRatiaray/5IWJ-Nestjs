@@ -16,6 +16,7 @@ import { ArtistStatementsModule } from './artist-statements/artist-statements.mo
 import { ExhibitionsModule } from './exhibitions/exhibitions.module';
 import { LoansModule } from './loans/loans.module';
 import { ArtistTransferRequestsModule } from './artist-transfer-requests/artist-transfer-requests.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { ArtistTransferRequestsModule } from './artist-transfer-requests/artist-
     ExhibitionsModule,
     LoansModule,
     ArtistTransferRequestsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
