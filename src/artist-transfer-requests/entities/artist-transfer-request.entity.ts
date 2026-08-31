@@ -46,8 +46,8 @@ export class ArtistTransferRequest {
   @ManyToOne(() => User, (user) => user.decidedTransferRequests, {
     nullable: true,
   })
-  decidedBy?: User;
+  decidedBy?: User | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  decidedAt?: Date;
+  decidedAt?: Date | null;
 }

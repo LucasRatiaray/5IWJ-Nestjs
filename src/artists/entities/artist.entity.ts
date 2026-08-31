@@ -41,7 +41,7 @@ export class Artist {
 
   @OneToOne(() => User, (user) => user.artist, { nullable: true })
   @JoinColumn()
-  user: User;
+  user?: User | null;
 
   @ManyToOne(() => Gallery, (gallery) => gallery.artists, { nullable: false })
   gallery: Gallery;
