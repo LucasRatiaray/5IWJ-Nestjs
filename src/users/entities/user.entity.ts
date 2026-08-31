@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   OneToOne,
   OneToMany,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { UserRole } from '../enums/user-role.enum';
@@ -28,11 +29,14 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.COLLECTOR })
   role: UserRole;
 
-  @Column({ default: false })
+  @Column({ default: true })
   isActive: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 
   @OneToOne(() => Gallery, (gallery) => gallery.user)
   gallery: Gallery;
