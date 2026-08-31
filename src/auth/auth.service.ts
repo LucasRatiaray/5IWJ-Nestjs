@@ -3,7 +3,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dtos/login.dto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
@@ -16,6 +15,7 @@ import { Collector } from '../collectors/entities/collector.entity';
 import { isUniqueViolation } from '../common/database/postgres-errors';
 import { ConfigService } from '@nestjs/config';
 import { RefreshDto } from './dtos/refresh.dto';
+import { hashPassword, verifyPassword } from '../common/security/password.util';
 
 @Injectable()
 export class AuthService {
@@ -31,7 +31,7 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    const isPasswordValid = await verifyPassword(dto.password, user.password);
 
     if (!isPasswordValid)
       throw new UnauthorizedException('Invalid credentials');
@@ -47,10 +47,12 @@ export class AuthService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
+    const passwordHash = await hashPassword(dto.password);
+
     try {
       const user = queryRunner.manager.create(User, {
         email: dto.email,
-        password: await bcrypt.hash(dto.password, 12),
+        password: passwordHash,
         role: dto.role,
         isActive: dto.role !== UserRole.GALLERY,
       });

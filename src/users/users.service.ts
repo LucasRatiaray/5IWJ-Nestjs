@@ -8,12 +8,12 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
-import * as bcrypt from 'bcrypt';
 import {
   isForeignKeyViolation,
   isUniqueViolation,
 } from '../common/database/postgres-errors';
 import { UserRole } from './enums/user-role.enum';
+import { hashPassword } from '../common/security/password.util';
 
 @Injectable()
 export class UsersService {
@@ -50,7 +50,7 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, role: UserRole = UserRole.COLLECTOR) {
-    const password = await bcrypt.hash(dto.password, 12);
+    const password = await hashPassword(dto.password);
     const user = this.repository.create({ email: dto.email, password, role });
     return this.saveOrConflict(user);
   }
