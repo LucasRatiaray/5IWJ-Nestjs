@@ -1,7 +1,9 @@
+import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MinLength, MaxLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsEmail()
+  @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   email: string;
 
   @IsString()

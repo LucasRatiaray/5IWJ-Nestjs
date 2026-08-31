@@ -1,39 +1,99 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import { CreateUserDto } from './dtos/create-user.dto';
+import * as bcrypt from 'bcrypt';
+import {
+  isForeignKeyViolation,
+  isUniqueViolation,
+} from '../common/database/postgres-errors';
+import { UserRole } from './enums/user-role.enum';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private repository: Repository<User>) {}
-
-  create(email: string, password: string) {
-    const user = this.repository.create({ email, password });
-    return this.repository.save(user);
-  }
+  constructor(
+    @InjectRepository(User) private readonly repository: Repository<User>,
+  ) {}
 
   findAll() {
     return this.repository.find();
   }
 
-  findOneById(id: string) {
-    return this.repository.findOneBy({ id });
+  async findOneById(id: string) {
+    const user = await this.repository.findOneBy({ id });
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+    return user;
   }
 
-  async update(id: string, attr: Partial<User>) {
+  async findByEmail(email: string) {
+    const user = await this.repository.findOneBy({ email });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  findByEmailWithPassword(email: string) {
+    return this.repository
+      .createQueryBuilder('u')
+      .addSelect('u.password')
+      .where('u.email = :email', { email })
+      .getOne();
+  }
+
+  existsByEmail(email: string) {
+    return this.repository.existsBy({ email });
+  }
+
+  async create(dto: CreateUserDto, role: UserRole = UserRole.COLLECTOR) {
+    const password = await bcrypt.hash(dto.password, 12);
+    const user = this.repository.create({ email: dto.email, password, role });
+    return this.saveOrConflict(user);
+  }
+
+  async update(id: string, attrs: UpdateUserDto): Promise<User> {
     const user = await this.findOneById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    Object.assign(user, attr);
-    return this.repository.save(user);
+    Object.assign(user, attrs);
+    return this.saveOrConflict(user);
   }
 
   async remove(id: string) {
     const user = await this.findOneById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
+    try {
+      return await this.repository.remove(user);
+    } catch (error) {
+      if (isForeignKeyViolation(error))
+        throw new ConflictException(
+          'Cannot delete a user with a linked profile — deactivate the account instead',
+        );
+      throw error;
     }
-    return this.repository.remove(user);
+  }
+
+  async activate(id: string) {
+    return this.setActive(id, true);
+  }
+
+  async deactivate(id: string) {
+    return this.setActive(id, false);
+  }
+
+  private async setActive(id: string, isActive: boolean) {
+    const user = await this.findOneById(id);
+    user.isActive = isActive;
+    return this.repository.save(user);
+  }
+
+  private async saveOrConflict(user: User): Promise<User> {
+    try {
+      return await this.repository.save(user);
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException('Email');
+      throw error;
+    }
   }
 }
