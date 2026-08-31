@@ -24,9 +24,6 @@ export class Gallery {
   @Column({ nullable: true })
   address?: string;
 
-  @Column({ default: false })
-  isValidated: boolean;
-
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
