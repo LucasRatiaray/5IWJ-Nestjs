@@ -4,6 +4,18 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { envValidationSchema } from './config/env.validation';
+import { UsersModule } from './users/users.module';
+import { GalleriesModule } from './galleries/galleries.module';
+import { ArtistsModule } from './artists/artists.module';
+import { CollectorsModule } from './collectors/collectors.module';
+import { ArtworksModule } from './artworks/artworks.module';
+import { ArtworkStatusHistoriesModule } from './artwork-status-histories/artwork-status-histories.module';
+import { SalesModule } from './sales/sales.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { ArtistStatementsModule } from './artist-statements/artist-statements.module';
+import { ExhibitionsModule } from './exhibitions/exhibitions.module';
+import { LoansModule } from './loans/loans.module';
+import { ArtistTransferRequestsModule } from './artist-transfer-requests/artist-transfer-requests.module';
 
 @Module({
   imports: [
@@ -25,6 +37,18 @@ import { envValidationSchema } from './config/env.validation';
         synchronize: config.get<string>('NODE_ENV') !== 'production',
       }),
     }),
+    UsersModule,
+    GalleriesModule,
+    ArtistsModule,
+    CollectorsModule,
+    ArtworksModule,
+    ArtworkStatusHistoriesModule,
+    SalesModule,
+    InvoicesModule,
+    ArtistStatementsModule,
+    ExhibitionsModule,
+    LoansModule,
+    ArtistTransferRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
