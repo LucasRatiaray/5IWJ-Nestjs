@@ -8,20 +8,13 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
-  Post,
 } from '@nestjs/common';
-import { CreateUserDto } from './dtos/create-user.dto';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dtos/update-user.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @Post()
-  create(@Body() body: CreateUserDto) {
-    return this.usersService.create(body);
-  }
 
   @Get()
   findAll() {
