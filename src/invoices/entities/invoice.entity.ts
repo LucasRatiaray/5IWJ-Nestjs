@@ -6,13 +6,18 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Transform } from 'class-transformer';
 import { Sale } from '../../sales/entities/sale.entity';
+
+const toNumber = ({ value }: { value: unknown }) =>
+  value == null ? value : Number(value);
 
 @Entity('invoices')
 export class Invoice {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Transform(toNumber)
   @Column('decimal', { precision: 12, scale: 2 })
   amount: number;
 
