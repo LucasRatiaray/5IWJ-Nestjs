@@ -35,6 +35,7 @@ export class ArtworksService {
 
     if (!artist)
       throw new NotFoundException(`Artist ${dto.artistId} not found`);
+
     if (user.role !== UserRole.ADMIN && artist.gallery.user.id !== user.sub) {
       throw new ForbiddenException('This artist is not in your gallery');
     }
