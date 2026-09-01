@@ -1,12 +1,11 @@
 import {
-  BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { CreateSaleDto } from './dtos/create-sale.dto';
+import { BusinessRuleViolationException } from '../common/exceptions/business-rule-violation.exception';
 import { JwtPayload } from '../auth/types/jwt-payload';
 import { Artwork } from '../artworks/entities/artwork.entity';
 import { UserRole } from '../users/enums/user-role.enum';
@@ -51,10 +50,14 @@ export class SalesService {
         throw new ForbiddenException('This artwork is not in your gallery');
 
       if (artwork.status !== ArtworkStatus.AVAILABLE)
-        throw new ConflictException('Artwork is not available for sale');
+        throw new BusinessRuleViolationException(
+          'Artwork is not available for sale',
+        );
 
       if (dto.salePrice < Number(artwork.reservePrice))
-        throw new BadRequestException('Sale price is below the reserve price');
+        throw new BusinessRuleViolationException(
+          'Sale price is below the reserve price',
+        );
 
       const collector = await queryRunner.manager.findOneBy(Collector, {
         id: dto.collectorId,

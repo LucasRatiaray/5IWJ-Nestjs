@@ -1,6 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { ArtworkQuotaPipe } from './artwork-quota.pipe';
+import { BusinessRuleViolationException } from '../../common/exceptions/business-rule-violation.exception';
 import { Artwork } from '../entities/artwork.entity';
 import { CreateArtworkDto } from '../dtos/create-artwork.dto';
 
@@ -20,7 +20,7 @@ describe('ArtworkQuotaPipe', () => {
 
   it('rejects when the artist already has 50 active artworks', async () => {
     await expect(pipeWithCount(50).transform(dto)).rejects.toBeInstanceOf(
-      BadRequestException,
+      BusinessRuleViolationException,
     );
   });
 });

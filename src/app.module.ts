@@ -19,6 +19,7 @@ import { ArtistTransferRequestsModule } from './artist-transfer-requests/artist-
 import { AuthModule } from './auth/auth.module';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { BusinessRuleViolationFilter } from './common/filters/business-rule-violation.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ReportsModule } from './reports/reports.module';
@@ -62,6 +63,7 @@ import { ReportsModule } from './reports/reports.module';
   providers: [
     AppService,
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_FILTER, useClass: BusinessRuleViolationFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ClassSerializerInterceptor },

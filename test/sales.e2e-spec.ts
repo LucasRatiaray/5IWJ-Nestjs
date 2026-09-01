@@ -127,11 +127,11 @@ describe('POST /sales (e2e)', () => {
     expect(stored?.status).toBe(ArtworkStatus.SOLD);
   });
 
-  it('rejects a second sale of the same artwork (409)', async () => {
+  it('rejects a second sale of the same artwork (422)', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/sales')
       .set('Authorization', `Bearer ${token}`)
       .send({ artworkId, collectorId, salePrice: 3000 })
-      .expect(409);
+      .expect(422);
   });
 });

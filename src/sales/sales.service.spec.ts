@@ -1,13 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SalesService } from './sales.service';
+import { BusinessRuleViolationException } from '../common/exceptions/business-rule-violation.exception';
 import { Sale } from './entities/sale.entity';
 import { ArtworkStatus } from '../artworks/enums/artwork-status.enum';
 import { UserRole } from '../users/enums/user-role.enum';
@@ -127,22 +123,22 @@ describe('SalesService', () => {
       );
     });
 
-    it('throws 409 when the artwork is not available', async () => {
+    it('throws a business-rule violation when the artwork is not available', async () => {
       manager.findOne.mockResolvedValue(
         artworkFixture({ status: ArtworkStatus.ON_LOAN }),
       );
       await expect(service.create(dto, gallery)).rejects.toBeInstanceOf(
-        ConflictException,
+        BusinessRuleViolationException,
       );
       expect(queryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
     });
 
-    it('throws 400 when the price is below the reserve', async () => {
+    it('throws a business-rule violation when the price is below the reserve', async () => {
       manager.findOne.mockResolvedValue(
         artworkFixture({ reservePrice: '5000' }),
       );
       await expect(service.create(dto, gallery)).rejects.toBeInstanceOf(
-        BadRequestException,
+        BusinessRuleViolationException,
       );
     });
 
