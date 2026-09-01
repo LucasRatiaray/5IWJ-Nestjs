@@ -12,6 +12,7 @@ import { Artist } from '../../artists/entities/artist.entity';
 import { Artwork } from '../../artworks/entities/artwork.entity';
 import { Loan } from '../../loans/entities/loan.entity';
 import { ArtistTransferRequest } from '../../artist-transfer-requests/entities/artist-transfer-request.entity';
+import { Exhibition } from '../../exhibitions/entities/exhibition.entity';
 
 @Entity('galleries')
 export class Gallery {
@@ -36,6 +37,9 @@ export class Gallery {
 
   @OneToMany(() => Artwork, (artwork) => artwork.gallery)
   artworks: Artwork[];
+
+  @OneToMany(() => Exhibition, (exhibition) => exhibition.gallery)
+  exhibitions: Exhibition[];
 
   @OneToMany(() => Loan, (loan) => loan.sourceGallery)
   outgoingLoans: Loan[];

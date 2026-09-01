@@ -4,9 +4,11 @@ import {
   Entity,
   JoinTable,
   ManyToMany,
+  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Artwork } from '../../artworks/entities/artwork.entity';
+import { Gallery } from '../../galleries/entities/gallery.entity';
 
 @Entity('exhibitions')
 export class Exhibition {
@@ -31,4 +33,9 @@ export class Exhibition {
   @ManyToMany(() => Artwork, (artwork) => artwork.exhibitions)
   @JoinTable({ name: 'exhibition_artworks' })
   artworks: Artwork[];
+
+  @ManyToOne(() => Gallery, (gallery) => gallery.exhibitions, {
+    nullable: false,
+  })
+  gallery: Gallery;
 }
