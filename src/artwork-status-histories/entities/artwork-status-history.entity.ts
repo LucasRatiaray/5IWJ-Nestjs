@@ -14,7 +14,7 @@ export class ArtworkStatusHistory {
   id: string;
 
   @Column({ type: 'enum', enum: ArtworkStatus, nullable: true })
-  fromStatus?: ArtworkStatus;
+  fromStatus?: ArtworkStatus | null;
 
   @Column({ type: 'enum', enum: ArtworkStatus })
   toStatus: ArtworkStatus;
@@ -23,7 +23,7 @@ export class ArtworkStatusHistory {
   changedAt: Date;
 
   @Column({ type: 'text', nullable: true })
-  reason?: string;
+  reason?: string | null;
 
   @ManyToOne(() => Artwork, (artwork) => artwork.artworkStatusHistories, {
     nullable: false,
