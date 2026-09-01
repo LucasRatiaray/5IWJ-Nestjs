@@ -1,10 +1,29 @@
 services:
-  node:
-    image: node:24-alpine
-    tty: true
-    stdin_open: true
-    working_dir: /home/node
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    volumes:  
-      - .:/home/node
+      - '3000:3000'
+    env_file:
+      - .env.production.local
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    env_file:
+      - .env.production.local
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
