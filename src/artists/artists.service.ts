@@ -13,6 +13,8 @@ import { UserRole } from '../users/enums/user-role.enum';
 import { JwtPayload } from '../auth/types/jwt-payload';
 import { Gallery } from '../galleries/entities/gallery.entity';
 import { User } from '../users/entities/user.entity';
+import { ArtistTransferRequest } from '../artist-transfer-requests/entities/artist-transfer-request.entity';
+import { ArtistTransferRequestStatus } from '../artist-transfer-requests/enums/artist-transfer-request-status.enum';
 import { hashPassword } from '../common/security/password.util';
 import { isUniqueViolation } from '../common/database/postgres-errors';
 
@@ -80,9 +82,37 @@ export class ArtistsService {
     await this.repository.remove(artist);
   }
 
-  async transfer(id: string, toGalleryId: string) {
-    await this.findOneById(id);
-    await this.repository.update(id, { gallery: { id: toGalleryId } });
+  async transfer(id: string, toGalleryId: string, user: JwtPayload) {
+    const artist = await this.repository.findOne({
+      where: { id },
+      relations: { gallery: true },
+    });
+    if (!artist) throw new NotFoundException(`Artist ${id} not found`);
+
+    const toGallery = await this.galleries.findOneBy({ id: toGalleryId });
+    if (!toGallery)
+      throw new NotFoundException(`Gallery ${toGalleryId} not found`);
+
+    if (artist.gallery.id === toGallery.id)
+      throw new ConflictException('Artist is already in this gallery');
+
+    const fromGallery = artist.gallery;
+
+    await this.dataSource.transaction(async (manager) => {
+      artist.gallery = toGallery;
+      await manager.save(artist);
+      await manager.save(
+        manager.create(ArtistTransferRequest, {
+          artist,
+          fromGallery,
+          toGallery,
+          status: ArtistTransferRequestStatus.APPROVED,
+          decidedBy: { id: user.sub } as User,
+          decidedAt: new Date(),
+        }),
+      );
+    });
+
     return this.findOneById(id);
   }
 

@@ -66,7 +66,8 @@ export class ArtistsController {
   transfer(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: TransferArtistDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.artistsService.transfer(id, body.toGalleryId);
+    return this.artistsService.transfer(id, body.toGalleryId, user);
   }
 }
