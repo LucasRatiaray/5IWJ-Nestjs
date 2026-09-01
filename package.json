@@ -28,9 +28,12 @@
     "migration:revert": "docker compose -f compose.development.yaml exec api npm run typeorm:migration:revert",
     "seed:admin:run": "ts-node src/database/seeds/seed-admin.ts",
     "seed:admin": "docker compose -f compose.development.yaml exec api npm run seed:admin:run",
+    "seed:demo:run": "ts-node src/database/seeds/seed-demo.ts",
+    "seed:demo": "docker compose -f compose.development.yaml exec api npm run seed:demo:run",
     "typeorm:prod": "typeorm -d dist/database/data-source.js",
     "migration:run:prod": "npm run typeorm:prod -- migration:run",
-    "seed:admin:prod": "node dist/database/seeds/seed-admin.js"
+    "seed:admin:prod": "node dist/database/seeds/seed-admin.js",
+    "seed:demo:prod": "node dist/database/seeds/seed-demo.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
