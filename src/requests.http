@@ -25,12 +25,12 @@
 # NB REST Client : un bloc "@nom = valeur" qui suit un corps de requête doit
 # être précédé d'un séparateur "###", sinon il est collé au corps JSON.
 
-@host = http://localhost:3000
+@host = http://localhost:3001
 @baseUrl = {{host}}/api/v1
 
 # Identifiants de démo — à aligner avec ton .env pour l'admin
-@adminEmail = 
-@adminPassword = 
+@adminEmail = admin@consignart.com
+@adminPassword = rXRZOhreljL6HzEQ
 @galleryEmail = galerie-lumiere@consignart.test
 @galleryPassword = galerie-password-123
 @gallery2Email = galerie-horizon@consignart.test

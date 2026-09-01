@@ -20,7 +20,6 @@ export class ReportsService {
     @InjectRepository(User) private readonly users: Repository<User>,
   ) {}
 
-  // Galerie : oeuvres vendues/mois, chiffre d'affaires, top 5 artistes, taux de rotation
   async galleryDashboard(userId: string) {
     const gallery = await this.galleries.findOne({
       where: { user: { id: userId } },
@@ -36,12 +35,10 @@ export class ReportsService {
       .orderBy("date_trunc('month', sale.soldAt)", 'ASC')
       .getRawMany<{ mois: string; nombre: string }>();
 
-    // CA = somme des prix de vente (pas les commissions)
     const ca = await this.gallerySales(gallery.id)
       .select('COALESCE(SUM(sale.salePrice), 0)', 'total')
       .getRawOne<{ total: string }>();
 
-    // Top 5 classe par montant vendu
     const topArtistes = await this.gallerySales(gallery.id)
       .innerJoin('artwork.artist', 'artist')
       .select('artwork.artistId', 'artisteId')
@@ -60,7 +57,6 @@ export class ReportsService {
         totalVentes: string;
       }>();
 
-    // Taux de rotation = oeuvres vendues / catalogue total
     const venduesRow = await this.gallerySales(gallery.id)
       .select('COUNT(DISTINCT sale.artworkId)', 'vendues')
       .getRawOne<{ vendues: string }>();
@@ -85,7 +81,6 @@ export class ReportsService {
     };
   }
 
-  // Artiste : total des ventes, commissions versees, oeuvres encore disponibles
   async artistDashboard(userId: string) {
     const artist = await this.artists.findOne({
       where: { user: { id: userId } },
@@ -115,7 +110,6 @@ export class ReportsService {
     };
   }
 
-  // Admin : utilisateurs actifs, volume de transactions, commissions totales de la plateforme
   async adminDashboard() {
     const utilisateursActifs = await this.users.count({
       where: { isActive: true },
