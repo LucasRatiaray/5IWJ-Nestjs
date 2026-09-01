@@ -17,6 +17,6 @@ RUN npm ci --omit=dev
 COPY --from=build /home/node/app/dist ./dist
 
 USER node
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["sh", "-c", "npm run migration:run:prod && npm run seed:admin:prod && npm run start:prod"]

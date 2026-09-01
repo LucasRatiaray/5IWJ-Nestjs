@@ -7,7 +7,9 @@ services:
     working_dir: /home/node/app
     command: sh -c "npm install && npm run start:dev"
     ports:
-      - '3000:3000'
+      - '3001:3001'
+    environment:
+      PORT: 3001
     volumes:
       - .:/home/node/app
     env_file:
