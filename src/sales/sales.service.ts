@@ -12,11 +12,11 @@ import { Artwork } from '../artworks/entities/artwork.entity';
 import { UserRole } from '../users/enums/user-role.enum';
 import { ArtworkStatus } from '../artworks/enums/artwork-status.enum';
 import { Collector } from '../collectors/entities/collector.entity';
-import { ArtworkStatusHistory } from '../artwork-status-histories/entities/artwork-status-history.entity';
 import { Sale } from './entities/sale.entity';
 import { Invoice } from '../invoices/entities/invoice.entity';
 import { ArtistStatement } from '../artist-statements/entities/artist-statement.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { changeArtworkStatus } from '../common/artworks/change-artwork-status';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -66,16 +66,11 @@ export class SalesService {
       const commissionAmount = round2(dto.salePrice * rate);
       const artistBalance = round2(dto.salePrice - commissionAmount);
 
-      const fromStatus = artwork.status;
-      artwork.status = ArtworkStatus.SOLD;
-      await queryRunner.manager.save(artwork);
-      await queryRunner.manager.save(
-        queryRunner.manager.create(ArtworkStatusHistory, {
-          artwork,
-          fromStatus,
-          toStatus: ArtworkStatus.SOLD,
-          reason: 'sale',
-        }),
+      await changeArtworkStatus(
+        queryRunner.manager,
+        artwork,
+        ArtworkStatus.SOLD,
+        'sale',
       );
 
       const sale = queryRunner.manager.create(Sale, {
