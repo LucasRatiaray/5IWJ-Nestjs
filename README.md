@@ -1,91 +1,75 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ConsignArt
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST NestJS pour la consignation d'œuvres d'art entre galeries, artistes et collectionneurs.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Installation et lancement
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+Prérequis : Docker et Docker Compose.
 
 ```bash
-$ docker compose exec node npm install
+git clone <repo> consignart
+cd consignart
+cp .env.example .env.development.local
 ```
 
-## Compile and run the project
+Remplir les variables dans `.env.development.local` (secrets JWT à générer avec `openssl rand -base64 48`).
 
 ```bash
-# development
-$ docker compose exec node npm run start
-
-# watch mode
-$ docker compose exec node npm run start:dev
-
-# production mode
-$ docker compose exec node npm run start:prod
+docker compose -f compose.development.yaml up -d
 ```
 
-## Run linter
+Attendre que les logs affichent `Nest application successfully started`, puis :
 
 ```bash
-$ docker compose exec node npm run lint
+npm run migration:run   # crée les tables
+npm run seed:admin      # crée le compte admin (ADMIN_EMAIL / ADMIN_PASSWORD du .env)
 ```
 
-## Run tests
+L'API est disponible sur `http://localhost:3000/api/v1`.
+
+### Lancer la version production
 
 ```bash
-# unit tests
-$ docker compose exec node npm run test
-
-# e2e tests
-$ docker compose exec node npm run test:e2e
-
-# test coverage
-$ docker compose exec node npm run test:cov
+cp .env.example .env.production.local   # remplir avec de vraies valeurs
+docker compose up --build
 ```
 
-## Resources
+Cette commande construit l'image, démarre l'API et la base, puis applique automatiquement les migrations et crée le compte admin au démarrage.
 
-Check out a few resources that may come in handy when working with NestJS:
+## Modèle de données
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Comptes
 
-## Support
+| Entité | Rôle |
+|---|---|
+| **User** | Le compte de connexion : email, mot de passe, rôle (`admin`, `gallery`, `artist`, `collector`). |
+| **Gallery** | Profil d'une galerie, lié à un `User`. |
+| **Artist** | Profil d'un artiste, lié à une `Gallery`. Le lien vers un `User` est optionnel — un artiste peut être catalogué sans avoir de compte. |
+| **Collector** | Profil d'un collectionneur, lié à un `User`. |
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Œuvres et ventes
 
-## Stay in touch
+| Entité | Rôle |
+|---|---|
+| **Artwork** | Une œuvre : appartient à une `Gallery` et à un `Artist`. A un statut (`available`, `on_loan`, `sold`, `returned`). |
+| **ArtworkStatusHistory** | L'historique des changements de statut d'une œuvre. |
+| **Sale** | Une vente : relie une `Artwork` à un `Collector`, avec le prix et la commission de la galerie. |
+| **Invoice** | La facture générée pour le collectionneur lors d'une vente. |
+| **ArtistStatement** | Le relevé du montant reversé à l'artiste après une vente. |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Expositions et prêts
 
-## License
+| Entité | Rôle |
+|---|---|
+| **Exhibition** | Une exposition organisée par une galerie, regroupant plusieurs `Artwork`. |
+| **Loan** | Un prêt d'une `Artwork` d'une galerie source vers une galerie destination. |
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Comment tout se relie
+
+- Un `User` a **un seul** profil : `Gallery`, `Artist` ou `Collector`.
+- Une `Gallery` a plusieurs `Artist` et plusieurs `Artwork`.
+- Un `Artist` appartient à une seule `Gallery` et a plusieurs `Artwork`.
+- Une `Artwork` appartient à une `Gallery` et à un `Artist`, et garde l'historique de ses statuts.
+- Une vente (`Sale`) concerne une `Artwork` et un `Collector`, et génère une `Invoice` (pour le collectionneur) et un `ArtistStatement` (pour l'artiste).
+- Une `Exhibition` regroupe plusieurs `Artwork` d'une même galerie ; le temps de l'exposition, ces œuvres passent au statut `on_loan`.
+- Un `Loan` relie une `Artwork` à deux galeries (source et destination) ; l'œuvre passe aussi au statut `on_loan` le temps du prêt.
