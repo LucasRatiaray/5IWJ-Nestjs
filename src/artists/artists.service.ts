@@ -1,33 +1,59 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Artist } from './entities/artist.entity';
 import { CreateArtistDto } from './dtos/create-artist.dto';
 import { UpdateArtistDto } from './dtos/update-artist.dto';
 import { UserRole } from '../users/enums/user-role.enum';
 import { JwtPayload } from '../auth/types/jwt-payload';
 import { Gallery } from '../galleries/entities/gallery.entity';
+import { User } from '../users/entities/user.entity';
+import { hashPassword } from '../common/security/password.util';
+import { isUniqueViolation } from '../common/database/postgres-errors';
 
 @Injectable()
 export class ArtistsService {
   constructor(
     @InjectRepository(Artist) private readonly repository: Repository<Artist>,
     @InjectRepository(Gallery) private readonly galleries: Repository<Gallery>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(dto: CreateArtistDto, user: JwtPayload) {
     const gallery = await this.galleryOf(user);
-    const { joinedAt, ...rest } = dto;
-    const artist = this.repository.create({
-      ...rest,
-      joinedAt: new Date(joinedAt),
-      gallery,
-    });
-    return this.repository.save(artist);
+    const { joinedAt, email, password, ...rest } = dto;
+    const attrs = { ...rest, joinedAt: new Date(joinedAt), gallery };
+
+    if (!email || !password) {
+      return this.repository.save(this.repository.create(attrs));
+    }
+
+    const passwordHash = await hashPassword(password);
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const account = await manager.save(
+          manager.create(User, {
+            email,
+            password: passwordHash,
+            role: UserRole.ARTIST,
+            isActive: true,
+          }),
+        );
+        return manager.save(
+          manager.create(Artist, { ...attrs, user: account }),
+        );
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Email already in use');
+      }
+      throw error;
+    }
   }
 
   findAllFor(user: JwtPayload) {
