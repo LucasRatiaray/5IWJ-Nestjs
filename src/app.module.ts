@@ -21,6 +21,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     LoansModule,
     ArtistTransferRequestsModule,
     AuthModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
