@@ -7,18 +7,24 @@ import {
 } from 'typeorm';
 import { Artwork } from '../../artworks/entities/artwork.entity';
 import { Gallery } from '../../galleries/entities/gallery.entity';
+import { Exclude, Expose } from 'class-transformer';
 
 @Entity('loans')
+@Exclude()
 export class Loan {
+  @Expose()
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Expose()
   @Column({ type: 'date' })
   startDate: Date;
 
+  @Expose()
   @Column({ type: 'date' })
   endDate: Date;
 
+  @Expose()
   @Column({ type: 'text', nullable: true })
   conditions?: string;
 
