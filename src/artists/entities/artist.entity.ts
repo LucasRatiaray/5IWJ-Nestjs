@@ -53,6 +53,7 @@ export class Artist {
   @JoinColumn()
   user?: User | null;
 
+  @Expose()
   @ManyToOne(() => Gallery, (gallery) => gallery.artists, { nullable: false })
   gallery: Gallery;
 

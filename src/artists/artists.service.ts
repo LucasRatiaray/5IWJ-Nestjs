@@ -59,14 +59,19 @@ export class ArtistsService {
   }
 
   findAllFor(user: JwtPayload) {
-    if (user.role === UserRole.ADMIN) return this.repository.find();
+    if (user.role === UserRole.ADMIN)
+      return this.repository.find({ relations: { gallery: true } });
     return this.repository.find({
       where: { gallery: { user: { id: user.sub } } },
+      relations: { gallery: true },
     });
   }
 
   async findOneById(id: string) {
-    const artist = await this.repository.findOneBy({ id });
+    const artist = await this.repository.findOne({
+      where: { id },
+      relations: { gallery: true },
+    });
     if (!artist) throw new NotFoundException(`Artist ${id} not found`);
     return artist;
   }
