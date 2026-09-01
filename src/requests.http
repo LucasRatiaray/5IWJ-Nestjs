@@ -1,0 +1,533 @@
+# ConsignArt — démo de l'API REST
+#
+# Client conseillé : extension VS Code "REST Client" (humao.rest-client)
+# ou le HTTP Client de JetBrains. Exécuter les requêtes dans l'ordre :
+# les valeurs (tokens, ids) sont récupérées automatiquement depuis les
+# réponses des requêtes nommées (# @name ...).
+#
+# Prérequis :
+#   npm run start:dev          # API sur http://localhost:3000
+#   npm run seed:admin         # crée le compte admin depuis ADMIN_EMAIL / ADMIN_PASSWORD du .env
+#   npm run seed:demo          # (optionnel) jeu de données de démo : 2 galeries, 3 artistes,
+#                              # 5 œuvres, 1 vente sur demande, 1 vente directe, 1 expo, 1 prêt.
+#                              # Le script affiche les ids (gallery id, collector id, artwork ids).
+#
+# Après seed:demo, les inscriptions ci-dessous renvoient 409 (comptes déjà créés) :
+# passer directement aux requêtes "Connexion ...".
+#
+# Rappels d'archi :
+#   - Préfixe global "api" + versioning par URL  ->  /api/v1/...
+#   - Le health check n'est pas versionné        ->  /api/health
+#   - Auth : JWT Bearer. Les routes sont protégées par défaut ; @Public() pour les exceptions.
+#   - Une galerie s'inscrit INACTIVE : un admin doit l'activer avant le login.
+#   - Un collectionneur s'inscrit ACTIF immédiatement.
+#
+# NB REST Client : un bloc "@nom = valeur" qui suit un corps de requête doit
+# être précédé d'un séparateur "###", sinon il est collé au corps JSON.
+
+@host = http://localhost:3000
+@baseUrl = {{host}}/api/v1
+
+# Identifiants de démo — à aligner avec ton .env pour l'admin
+@adminEmail = 
+@adminPassword = 
+@galleryEmail = galerie-lumiere@consignart.test
+@galleryPassword = galerie-password-123
+@gallery2Email = galerie-horizon@consignart.test
+@gallery2Password = horizon-password-123
+@artistEmail = frida@consignart.test
+@artistPassword = artiste-password-123
+@collectorEmail = camille@consignart.test
+@collectorPassword = collector-password-123
+
+
+###############################################################################
+# 1. Santé (public)
+###############################################################################
+
+### Health check — pas de versioning, pas d'auth
+GET {{host}}/api/health
+
+
+###############################################################################
+# 2. Auth — inscription & connexion
+###############################################################################
+
+### Inscription galerie (créée inactive -> login refusé tant qu'un admin ne l'active pas)
+# @name registerGallery
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{galleryEmail}}",
+  "password": "{{galleryPassword}}",
+  "role": "gallery",
+  "name": "Galerie Lumière"
+}
+
+### Inscription collectionneur (active immédiatement)
+# @name registerCollector
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{collectorEmail}}",
+  "password": "{{collectorPassword}}",
+  "role": "collector",
+  "firstName": "Camille",
+  "lastName": "Durand"
+}
+
+### Erreur de validation : mot de passe trop court + rôle interdit -> 400
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "invalide",
+  "password": "court",
+  "role": "admin"
+}
+
+### Connexion admin (compte seedé)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.accessToken}}
+@adminRefresh = {{loginAdmin.response.body.refreshToken}}
+
+### Connexion galerie AVANT activation -> 401 "Account is not active yet"
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{galleryEmail}}",
+  "password": "{{galleryPassword}}"
+}
+
+### Rafraîchir les tokens
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{adminRefresh}}"
+}
+
+
+###############################################################################
+# 3. Users — administration des comptes (admin) + self-service
+###############################################################################
+
+###
+@galleryUserId = {{registerGallery.response.body.id}}
+@collectorUserId = {{registerCollector.response.body.id}}
+
+### Lister tous les utilisateurs (admin uniquement)
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+
+### Activer la galerie inscrite plus haut (admin)
+PATCH {{baseUrl}}/users/{{galleryUserId}}/activate
+Authorization: Bearer {{adminToken}}
+
+### Connexion galerie APRÈS activation -> 200 + tokens
+# @name loginGallery
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{galleryEmail}}",
+  "password": "{{galleryPassword}}"
+}
+
+###
+@galleryToken = {{loginGallery.response.body.accessToken}}
+
+### Connexion collectionneur
+# @name loginCollector
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{collectorEmail}}",
+  "password": "{{collectorPassword}}"
+}
+
+###
+@collectorToken = {{loginCollector.response.body.accessToken}}
+
+### Mon profil (n'importe quel utilisateur connecté)
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{galleryToken}}
+
+### Lire un utilisateur — OwnershipGuard : soi-même ou admin
+GET {{baseUrl}}/users/{{galleryUserId}}
+Authorization: Bearer {{galleryToken}}
+
+### Modifier son email
+PATCH {{baseUrl}}/users/{{collectorUserId}}
+Authorization: Bearer {{collectorToken}}
+Content-Type: application/json
+
+{
+  "email": "camille.durand@consignart.test"
+}
+
+### Désactiver / réactiver un compte (admin)
+PATCH {{baseUrl}}/users/{{collectorUserId}}/deactivate
+Authorization: Bearer {{adminToken}}
+
+### Supprimer un utilisateur (admin) -> 204
+# DELETE {{baseUrl}}/users/{{collectorUserId}}
+# Authorization: Bearer {{adminToken}}
+
+### Contrôle d'accès : un collectionneur qui liste les users -> 403
+GET {{baseUrl}}/users
+Authorization: Bearer {{collectorToken}}
+
+### Sans token -> 401
+GET {{baseUrl}}/users/me
+
+
+###############################################################################
+# 4. Artists — gérés par la galerie
+###############################################################################
+
+### Créer un artiste SANS compte de connexion (fiche seule)
+# @name createArtistNoAccount
+POST {{baseUrl}}/artists
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Pierre",
+  "lastName": "Soulages",
+  "nationality": "FR",
+  "biography": "Peintre de l'outrenoir.",
+  "joinedAt": "2026-01-15"
+}
+
+### Créer un artiste AVEC compte (email + password -> user role artist, actif)
+# @name createArtist
+POST {{baseUrl}}/artists
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Frida",
+  "lastName": "Kahlo",
+  "nationality": "MX",
+  "portfolioUrl": "https://example.com/frida",
+  "joinedAt": "2026-02-01",
+  "email": "{{artistEmail}}",
+  "password": "{{artistPassword}}"
+}
+
+###
+@artistId = {{createArtist.response.body.id}}
+
+### Connexion artiste
+# @name loginArtist
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{artistEmail}}",
+  "password": "{{artistPassword}}"
+}
+
+###
+@artistToken = {{loginArtist.response.body.accessToken}}
+
+### Lister mes artistes (galerie voit les siens, admin voit tout)
+GET {{baseUrl}}/artists
+Authorization: Bearer {{galleryToken}}
+
+### Détail d'un artiste
+GET {{baseUrl}}/artists/{{artistId}}
+Authorization: Bearer {{galleryToken}}
+
+### Mettre à jour un artiste
+PATCH {{baseUrl}}/artists/{{artistId}}
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "biography": "Peintre mexicaine, autoportraits.",
+  "status": "active"
+}
+
+### Supprimer un artiste -> 204
+# DELETE {{baseUrl}}/artists/{{artistId}}
+# Authorization: Bearer {{galleryToken}}
+
+### Transfert d'un artiste vers une autre galerie (admin)
+# toGalleryId = id de l'entité Gallery cible. Aucune route ne l'expose :
+# le prendre dans la sortie de `npm run seed:demo` (Galerie Horizon)
+# ou en base : SELECT id, name FROM galleries;
+# PATCH {{baseUrl}}/artists/{{artistId}}/transfer
+# Authorization: Bearer {{adminToken}}
+# Content-Type: application/json
+#
+# {
+#   "toGalleryId": "00000000-0000-0000-0000-000000000000"
+# }
+
+
+###############################################################################
+# 5. Artworks — catalogue
+###############################################################################
+
+### Créer une œuvre (galerie). Réponse : groupe "gallery" -> reservePrice visible.
+# @name createArtwork
+POST {{baseUrl}}/artworks
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "title": "Composition en noir",
+  "description": "Huile sur toile",
+  "creationYear": 1959,
+  "technique": "Huile sur toile",
+  "height": 130,
+  "width": 97,
+  "salePrice": 8000,
+  "reservePrice": 6000,
+  "artistId": "{{artistId}}",
+  "consignedAt": "2026-03-01"
+}
+
+###
+@artworkId = {{createArtwork.response.body.id}}
+
+### Créer une 2e œuvre (servira à la vente directe / au prêt)
+# @name createArtwork2
+POST {{baseUrl}}/artworks
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "title": "Sans titre 12",
+  "technique": "Acrylique",
+  "salePrice": 25000,
+  "reservePrice": 18000,
+  "artistId": "{{artistId}}",
+  "consignedAt": "2026-03-05"
+}
+
+###
+@artwork2Id = {{createArtwork2.response.body.id}}
+
+### Lister le catalogue (public — pas de reservePrice sans le groupe gallery)
+GET {{baseUrl}}/artworks
+
+### Filtrer par date de consignation (pipe date FR : jj/mm/aaaa OU ISO)
+GET {{baseUrl}}/artworks?consignedAfter=01/02/2026
+
+### Détail d'une œuvre
+GET {{baseUrl}}/artworks/{{artworkId}}
+
+### Mettre à jour une œuvre
+PATCH {{baseUrl}}/artworks/{{artworkId}}
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "salePrice": 8500
+}
+
+### Supprimer une œuvre -> 204
+# DELETE {{baseUrl}}/artworks/{{artworkId}}
+# Authorization: Bearer {{galleryToken}}
+
+
+###############################################################################
+# 6. Purchase requests — le collectionneur demande, la galerie tranche
+###############################################################################
+
+### Le collectionneur demande à acheter une œuvre disponible
+# @name createPurchaseRequest
+POST {{baseUrl}}/purchase-requests
+Authorization: Bearer {{collectorToken}}
+Content-Type: application/json
+
+{
+  "artworkId": "{{artworkId}}"
+}
+
+###
+@purchaseRequestId = {{createPurchaseRequest.response.body.id}}
+@collectorEntityId = {{createPurchaseRequest.response.body.collector.id}}
+
+### Lister les demandes (scopées : collectionneur voit les siennes, galerie les siennes, admin tout)
+GET {{baseUrl}}/purchase-requests
+Authorization: Bearer {{collectorToken}}
+
+### La galerie confirme -> crée la vente + la facture + le relevé artiste (transaction)
+# @name confirmPurchaseRequest
+PATCH {{baseUrl}}/purchase-requests/{{purchaseRequestId}}/confirm
+Authorization: Bearer {{galleryToken}}
+
+###
+@saleId = {{confirmPurchaseRequest.response.body.id}}
+
+### (Variante) La galerie rejette une demande
+# PATCH {{baseUrl}}/purchase-requests/{{purchaseRequestId}}/reject
+# Authorization: Bearer {{galleryToken}}
+
+
+###############################################################################
+# 7. Sales — ventes et commission par palier
+###############################################################################
+# Commission : <= 5000 -> 40 % ; <= 20000 -> 35 % ; au-delà -> 30 %
+# Refus si prix < prix de réserve.
+
+### Vente directe par la galerie (sans passer par une demande d'achat)
+# @name createSale
+POST {{baseUrl}}/sales
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "artworkId": "{{artwork2Id}}",
+  "collectorId": "{{collectorEntityId}}",
+  "salePrice": 25000
+}
+
+### Prix sous la réserve -> 400 "Sale price is below the reserve price"
+POST {{baseUrl}}/sales
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "artworkId": "{{artwork2Id}}",
+  "collectorId": "{{collectorEntityId}}",
+  "salePrice": 100
+}
+
+### Lister les ventes (scopées par rôle : galerie / artiste / collectionneur / admin)
+GET {{baseUrl}}/sales
+Authorization: Bearer {{galleryToken}}
+
+### Détail d'une vente
+GET {{baseUrl}}/sales/{{saleId}}
+Authorization: Bearer {{galleryToken}}
+
+
+###############################################################################
+# 8. Invoices — factures du collectionneur
+###############################################################################
+
+### Le collectionneur consulte ses factures
+GET {{baseUrl}}/invoices
+Authorization: Bearer {{collectorToken}}
+
+### Une galerie sur /invoices -> 403 (réservé au rôle collector)
+GET {{baseUrl}}/invoices
+Authorization: Bearer {{galleryToken}}
+
+
+###############################################################################
+# 9. Artist statements — relevés de l'artiste
+###############################################################################
+
+### L'artiste consulte ses relevés (montant net après commission)
+GET {{baseUrl}}/artist-statements
+Authorization: Bearer {{artistToken}}
+
+
+###############################################################################
+# 10. Exhibitions — expositions
+###############################################################################
+
+### Créer une exposition avec des œuvres (galerie)
+# @name createExhibition
+POST {{baseUrl}}/exhibitions
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "name": "Rétrospective 2026",
+  "startDate": "2026-06-01",
+  "endDate": "2026-09-30",
+  "location": "Paris, 3e",
+  "artworkIds": ["{{artworkId}}"]
+}
+
+###
+@exhibitionId = {{createExhibition.response.body.id}}
+
+### Lister les expositions (public)
+GET {{baseUrl}}/exhibitions
+
+### Détail d'une exposition
+GET {{baseUrl}}/exhibitions/{{exhibitionId}}
+
+### Supprimer une exposition -> 204
+# DELETE {{baseUrl}}/exhibitions/{{exhibitionId}}
+# Authorization: Bearer {{galleryToken}}
+
+
+###############################################################################
+# 11. Loans — prêts inter-galeries
+###############################################################################
+# destinationGalleryId = id d'une AUTRE entité Gallery.
+# Aucune route ne l'expose : le prendre dans la sortie de `npm run seed:demo`
+# (Galerie Horizon) ou en base : SELECT id, name FROM galleries;
+# À défaut de seed, inscrire une 2e galerie (@gallery2Email), l'activer,
+# et lire son gallery.id côté DB.
+
+###
+@destinationGalleryId = 00000000-0000-0000-0000-000000000000
+
+### Créer un prêt (galerie propriétaire de l'œuvre)
+# @name createLoan
+POST {{baseUrl}}/loans
+Authorization: Bearer {{galleryToken}}
+Content-Type: application/json
+
+{
+  "artworkId": "{{artworkId}}",
+  "destinationGalleryId": "{{destinationGalleryId}}",
+  "startDate": "2026-07-01",
+  "endDate": "2026-08-15",
+  "conditions": "Assurance clou à clou à la charge de l'emprunteur"
+}
+
+###
+@loanId = {{createLoan.response.body.id}}
+
+### Lister mes prêts (scopés par rôle)
+GET {{baseUrl}}/loans
+Authorization: Bearer {{galleryToken}}
+
+### Détail d'un prêt
+GET {{baseUrl}}/loans/{{loanId}}
+Authorization: Bearer {{galleryToken}}
+
+### Retour de prêt -> l'œuvre repasse disponible
+PATCH {{baseUrl}}/loans/{{loanId}}/return
+Authorization: Bearer {{galleryToken}}
+
+
+###############################################################################
+# 12. Reports — tableaux de bord par rôle
+###############################################################################
+
+### Dashboard galerie : ventes/mois, CA, top 5 artistes, taux de rotation
+GET {{baseUrl}}/reports/gallery
+Authorization: Bearer {{galleryToken}}
+
+### Dashboard artiste : total ventes, commissions versées, œuvres disponibles
+GET {{baseUrl}}/reports/artist
+Authorization: Bearer {{artistToken}}
+
+### Dashboard admin : utilisateurs actifs, volume de transactions, commissions plateforme
+GET {{baseUrl}}/reports/admin
+Authorization: Bearer {{adminToken}}
