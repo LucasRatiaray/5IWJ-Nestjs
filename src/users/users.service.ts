@@ -49,9 +49,9 @@ export class UsersService {
     return this.saveOrConflict(user);
   }
 
-  async update(id: string, attrs: UpdateUserDto): Promise<User> {
+  async update(id: string, dto: UpdateUserDto): Promise<User> {
     const user = await this.findOneById(id);
-    Object.assign(user, attrs);
+    Object.assign(user, dto);
     return this.saveOrConflict(user);
   }
 
